@@ -1,4 +1,4 @@
-/*! cornerstone-tools - 2.0.0 - 2018-02-12 | (c) 2017 Chris Hafey | https://github.com/cornerstonejs/cornerstoneTools */
+/*! cornerstone-tools - 2.0.1 - 2018-02-26 | (c) 2017 Chris Hafey | https://github.com/cornerstonejs/cornerstoneTools */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -334,7 +334,9 @@ function setToolOptions(toolType, element, options) {
       options: options
     });
   } else {
-    elementToolOptions[toolType][index].options = options;
+    var elementOptions = elementToolOptions[toolType][index].options || {};
+
+    elementToolOptions[toolType][index].options = Object.assign(elementOptions, options);
   }
 }
 
@@ -653,6 +655,17 @@ exports.default = function (mouseToolInterface) {
       return;
     }
 
+    // Reset the activation control if it's a new mouseMove event
+    if (e.timeStamp !== activationControl.timeStamp) {
+      activationControl.timeStamp = e.timeStamp;
+      activationControl.alreadyActivated = false;
+    }
+
+    // Stop here if some handle from another tool has been activated already
+    if (activationControl.alreadyActivated) {
+      return;
+    }
+
     // We have tool data, search through all data
     // And see if we can activate a handle
     var imageNeedsUpdate = false;
@@ -670,6 +683,19 @@ exports.default = function (mouseToolInterface) {
       if (mouseToolInterface.pointNearTool(eventData.element, data, coords) && !data.active || !mouseToolInterface.pointNearTool(eventData.element, data, coords) && data.active) {
         data.active = !data.active;
         imageNeedsUpdate = true;
+      }
+    }
+
+    for (var _i = 0; _i < toolData.data.length; _i++) {
+      var _data = toolData.data[_i];
+
+      if (activationControl.alreadyActivated) {
+        _data.active = false;
+        imageNeedsUpdate = true;
+      }
+
+      if (_data.active) {
+        activationControl.alreadyActivated = true;
       }
     }
 
@@ -1003,6 +1029,11 @@ var _triggerEvent2 = _interopRequireDefault(_triggerEvent);
 var _toolOptions = __webpack_require__(3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var activationControl = {
+  timeStamp: 0,
+  alreadyActivated: false
+};
 
 /***/ }),
 /* 10 */
@@ -8395,6 +8426,7 @@ var _toolOptions = __webpack_require__(3);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var toolType = 'stackScroll';
+var toolTypeTouchDrag = 'stackScrollTouchDrag';
 
 function mouseUpCallback(e) {
   var eventData = e.detail;
@@ -8498,7 +8530,7 @@ var options = {
     deltaY: 0
   }
 };
-var stackScrollTouchDrag = (0, _touchDragTool2.default)(dragCallback, toolType, options);
+var stackScrollTouchDrag = (0, _touchDragTool2.default)(dragCallback, toolTypeTouchDrag, options);
 
 function multiTouchDragCallback(e) {
   var eventData = e.detail;
@@ -9923,7 +9955,7 @@ function mouseWheel(e) {
   var wheelDelta = void 0;
 
   if (e.wheelDelta) {
-    wheelDelta = -e.wheelDelta;
+    wheelDelta = e.wheelDelta;
   } else if (e.deltaY) {
     wheelDelta = -e.deltaY;
   } else if (e.detail) {
@@ -11378,6 +11410,12 @@ function chooseLocation(e) {
     // Find within the element's stack the closest image plane to selected location
     stackData.imageIds.forEach(function (imageId, index) {
       var imagePlane = cornerstone.metaData.get('imagePlaneModule', imageId);
+
+      // Skip if the image plane is not ready
+      if (!imagePlane || !imagePlane.imagePositionPatient || !imagePlane.rowCosines || !imagePlane.columnCosines) {
+        return;
+      }
+
       var imagePosition = (0, _convertToVector2.default)(imagePlane.imagePositionPatient);
       var row = (0, _convertToVector2.default)(imagePlane.rowCosines);
       var column = (0, _convertToVector2.default)(imagePlane.columnCosines);
@@ -17395,7 +17433,7 @@ exports.adaptiveBrush = adaptiveBrush;
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = '2.0.0';
+exports.default = '2.0.1';
 
 /***/ })
 /******/ ]);

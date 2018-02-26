@@ -12,6 +12,11 @@ import { addToolState, removeToolState, getToolState } from '../stateManagement/
 import triggerEvent from '../util/triggerEvent.js';
 import { getToolOptions, setToolOptions } from '../toolOptions.js';
 
+const activationControl = {
+  timeStamp: 0,
+  alreadyActivated: false
+};
+
 export default function (mouseToolInterface) {
   let configuration = {};
   const toolType = mouseToolInterface.toolType;
@@ -51,6 +56,17 @@ export default function (mouseToolInterface) {
       return;
     }
 
+    // Reset the activation control if it's a new mouseMove event
+    if (e.timeStamp !== activationControl.timeStamp) {
+      activationControl.timeStamp = e.timeStamp;
+      activationControl.alreadyActivated = false;
+    }
+
+    // Stop here if some handle from another tool has been activated already
+    if (activationControl.alreadyActivated) {
+      return;
+    }
+
     // We have tool data, search through all data
     // And see if we can activate a handle
     let imageNeedsUpdate = false;
@@ -69,6 +85,19 @@ export default function (mouseToolInterface) {
           (!mouseToolInterface.pointNearTool(eventData.element, data, coords) && data.active)) {
         data.active = !data.active;
         imageNeedsUpdate = true;
+      }
+    }
+
+    for (let i = 0; i < toolData.data.length; i++) {
+      const data = toolData.data[i];
+
+      if (activationControl.alreadyActivated) {
+        data.active = false;
+        imageNeedsUpdate = true;
+      }
+
+      if (data.active) {
+        activationControl.alreadyActivated = true;
       }
     }
 
